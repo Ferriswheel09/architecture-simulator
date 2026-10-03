@@ -1,0 +1,8 @@
+{
+  "name": "c6461-part-i-simulator",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  }
+}
