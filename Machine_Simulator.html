@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<!-- saved from url=(0085)https://mslcourses.org/CSCI6461CommonMaterials/Simulator/CSCI6461Simulator080226.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>C6461 Machine Front Panel - Phase 1</title>
+<style>
+    body { margin:0; font-family: Arial, sans-serif; background:#e6e6e6; }
+    .workspace { width:1560px; margin:20px auto; display:flex; gap:18px; align-items:flex-start; }
+
+    .panel {
+      width:1180px;
+      margin:0;
+      background:#12a9d8;
+      padding:28px 36px 36px 36px;
+      box-sizing:border-box;
+      min-height:640px;
+    }
+
+    .top { display:flex; justify-content:space-between; gap:60px; }
+
+    .column { display:flex; flex-direction:column; gap:14px; }
+
+    .reg-row { display:flex; align-items:center; gap:10px; }
+
+    .reg-label { width:80px; text-align:right; font-weight:700; font-size:18px; }
+    .reg-label.small { width:60px; }
+
+    .octal-box {
+      width:170px; height:34px;
+      font-family:monospace;
+      font-size:24px;
+      text-align:center;
+      border:2px solid #222;
+      background:white;
+    }
+
+    .octal-box.short { width:120px; }
+    .octal-box.addr { width:130px; }
+
+    .btn {
+      height:34px;
+      padding:0 10px;
+      border:1px solid #999;
+      border-radius:6px;
+      background:#eee;
+      font-weight:bold;
+      cursor:pointer;
+    }
+
+    .mid-controls {
+      margin-top:80px;
+      display:flex;
+      justify-content:flex-end;
+      gap:18px;
+    }
+
+    .control-stack {
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .init-btn { background:red; color:white; }
+    .halt-lit { background:red; color:white; }
+
+    .bottom { margin-top:40px; }
+
+    .switch-blocks { display:flex; gap:14px; }
+
+    .switch-group {
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:6px;
+    }
+
+    .switch-bank { display:flex; gap:6px; }
+
+    .bit {
+      width:30px; height:45px;
+      border:2px solid #333;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      background:#ddd;
+      font-size:12px;
+      font-weight:bold;
+    }
+
+    .bit.on { background:black; color:white; }
+
+    .switch-label { font-weight:bold; }
+
+    .word-display {
+      margin-top:15px;
+      font-family:monospace;
+      font-size:22px;
+      background:rgba(255,255,255,0.4);
+      padding:10px;
+    }
+
+    .terminal {
+      width:350px;
+      background:#1e1e1e;
+      color:#e8e8e8;
+      padding:14px;
+      box-sizing:border-box;
+      min-height:640px;
+      font-family:Consolas, monospace;
+      border:3px solid #333;
+    }
+    .terminal h2 { margin:0 0 10px 0; font-family:Arial, sans-serif; font-size:20px; color:white; }
+    .terminal label { display:block; margin-top:10px; margin-bottom:4px; font-family:Arial, sans-serif; font-size:13px; color:#d0d0d0; }
+    #terminalOutput { width:100%; height:450px; resize:vertical; box-sizing:border-box; background:#050505; color:#00ff66; border:1px solid #555; padding:8px; font-family:Consolas, monospace; font-size:14px; }
+    #terminalInput { width:100%; box-sizing:border-box; background:#111; color:#fff; border:1px solid #777; padding:8px; font-family:Consolas, monospace; font-size:15px; }
+    .terminal-row { display:flex; gap:8px; margin-top:8px; }
+    .terminal-row .btn { flex:1; }
+  </style>
+</head>
+<body>
+<div class="workspace">
+<div class="panel">
+<div class="top">
+<!-- LEFT -->
+<div class="column">
+<div class="reg-row"><div class="reg-label">GPR 0</div>
+<input class="octal-box load-target" maxlength="6" value="000000"><button class="btn load-btn">LD</button></div>
+<div class="reg-row"><div class="reg-label">GPR 1</div>
+<input class="octal-box load-target" maxlength="6" value="000000"><button class="btn load-btn">LD</button></div>
+<div class="reg-row"><div class="reg-label">GPR 2</div>
+<input class="octal-box load-target" maxlength="6" value="000000"><button class="btn load-btn">LD</button></div>
+<div class="reg-row"><div class="reg-label">GPR 3</div>
+<input class="octal-box load-target" maxlength="6" value="000000"><button class="btn load-btn">LD</button></div>
+<div style="height:20px;"></div>
+<div class="reg-row"><div class="reg-label">IXR 1</div>
+<input class="octal-box load-target" maxlength="6" value="000000"><button class="btn load-btn">LD</button></div>
+<div class="reg-row"><div class="reg-label">IXR 2</div>
+<input class="octal-box load-target" maxlength="6" value="000000"><button class="btn load-btn">LD</button></div>
+<div class="reg-row"><div class="reg-label">IXR 3</div>
+<input class="octal-box load-target" maxlength="6" value="000000"><button class="btn load-btn">LD</button></div>
+</div>
+<!-- RIGHT -->
+<div class="column">
+<div class="reg-row"><div class="reg-label small">PC</div>
+<input id="pcBox" class="octal-box addr load-target" maxlength="4" value="0000"><button class="btn load-btn">LD</button></div>
+<div class="reg-row"><div class="reg-label small">MAR</div>
+<input class="octal-box addr load-target" id="marBox" maxlength="4" value="0000"><button class="btn load-btn">LD</button></div>
+<div class="reg-row"><div class="reg-label small">MBR</div>
+<input class="octal-box load-target" id="mbrBox" maxlength="6" value="000000"><button class="btn load-btn">LD</button></div>
+<div class="reg-row"><div class="reg-label small">IR</div>
+<input id="irBox" class="octal-box" maxlength="6" value="000000"></div>
+<div class="reg-row"><div class="reg-label small">MFR</div>
+<input id="mfrBox" class="octal-box short" maxlength="4" value="0000"></div>
+<div class="reg-row"><div class="reg-label small">CC</div>
+<input id="ccBox" class="octal-box short" maxlength="4" value="0000"></div>
+</div>
+</div>
+<!-- CONTROLS -->
+<div class="mid-controls" style="; margin-top:10px;">
+<div class="control-stack">
+<button class="btn" id="storeBtn">Store</button>
+<button class="btn" id="storePlusBtn">St+</button>
+<button id="runBtn" class="btn">Run</button>
+<button id="hltBtn" class="btn">HLT</button>
+</div>
+<div class="control-stack">
+<button class="btn" id="loadMemoryBtn">Load</button>
+<button class="btn" id="loadPlusBtn">Ld+</button>
+<button id="ssBtn" class="btn">SS</button>
+</div>
+<button id="initBtn" class="btn init-btn">Init</button>
+</div>
+<!-- BITS -->
+<div class="bottom">
+<div class="switch-blocks">
+<div class="switch-group">
+<div class="switch-bank">
+<div class="bit" data-bit="0">0</div>
+<div class="bit" data-bit="1">1</div>
+<div class="bit" data-bit="2">2</div>
+<div class="bit" data-bit="3">3</div>
+<div class="bit" data-bit="4">4</div>
+<div class="bit" data-bit="5">5</div>
+</div>
+<div class="switch-label">Operation</div>
+</div>
+<div class="switch-group">
+<div class="switch-bank">
+<div class="bit" data-bit="6">6</div>
+<div class="bit" data-bit="7">7</div>
+</div>
+<div class="switch-label">GPR</div>
+</div>
+<div class="switch-group">
+<div class="switch-bank">
+<div class="bit" data-bit="8">8</div>
+<div class="bit" data-bit="9">9</div>
+</div>
+<div class="switch-label">IXR</div>
+</div>
+<div class="switch-group">
+<div class="switch-bank">
+<div class="bit" data-bit="10">10</div>
+</div>
+<div class="switch-label">I</div>
+</div>
+<div class="switch-group">
+<div class="switch-bank">
+<div class="bit" data-bit="11">11</div>
+<div class="bit" data-bit="12">12</div>
+<div class="bit" data-bit="13">13</div>
+<div class="bit" data-bit="14">14</div>
+<div class="bit" data-bit="15">15</div>
+</div>
+<div class="switch-label">Address</div>
+</div>
+</div>
+<div class="word-display" id="wordDisplay">0000000000000000 / 000000</div>
+</div>
+</div>
+<div class="terminal">
+  <h2>Console Terminal</h2>
+  <label for="terminalOutput">Output / Echo</label>
+  <textarea id="terminalOutput" readonly=""></textarea>
+  <label for="terminalInput">Line Input</label>
+  <input id="terminalInput" type="text" placeholder="Type a line and press Enter" autocomplete="off">
+  <div class="terminal-row">
+    <button class="btn" id="terminalSendBtn">Send Line</button>
+    <button class="btn" id="terminalClearBtn">Clear</button>
+  </div>
+  <div style="margin-top:10px; font-size:12px; color:#bbb; line-height:1.35;">
+    Device 0 = keyboard input. Device 1 = printer output. CHK returns 1 when ready/input is waiting.
+  </div>
+</div>
+</div>
+<script>
+const bits = document.querySelectorAll(".bit");
+const display = document.getElementById("wordDisplay");
+
+const pcBox = document.getElementById("pcBox");
+const marBox = document.getElementById("marBox");
+const mbrBox = document.getElementById("mbrBox");
+const irBox = document.getElementById("irBox");
+const mfrBox = document.getElementById("mfrBox");
+const ccBox = document.getElementById("ccBox");
+
+const storeBtn = document.getElementById("storeBtn");
+const storePlusBtn = document.getElementById("storePlusBtn");
+const loadMemoryBtn = document.getElementById("loadMemoryBtn");
+const loadPlusBtn = document.getElementById("loadPlusBtn");
+const runBtn = document.getElementById("runBtn");
+const ssBtn = document.getElementById("ssBtn");
+const hltBtn = document.getElementById("hltBtn");
+const initBtn = document.getElementById("initBtn");
+
+const terminalOutput = document.getElementById("terminalOutput");
+const terminalInput = document.getElementById("terminalInput");
+const terminalSendBtn = document.getElementById("terminalSendBtn");
+const terminalClearBtn = document.getElementById("terminalClearBtn");
+
+/* MEMORY */
+const memory = new Array(2048).fill(0);
+
+let halted = false;
+let running = false;
+let runTimer = null;
+let inputQueue = [];
+let currentInstructionAddress = null;
+
+const gprBoxes = Array.from(document.querySelectorAll(".column:first-child .reg-row"))
+  .slice(0,4)
+  .map(row => row.querySelector("input"));
+
+const ixrBoxes = Array.from(document.querySelectorAll(".column:first-child .reg-row"))
+  .slice(4)
+  .map(row => row.querySelector("input"));
+
+/* Utilities */
+function normalize(val, width){
+  let v = String(val || "").replace(/[^0-7]/g,"");
+  if(v === "") v = "0";
+  return v.slice(-width).padStart(width,"0");
+}
+function toOctalText(value, width){ return (value & 0xFFFF).toString(8).padStart(width, "0").slice(-width); }
+function toBinaryText(value, width){ return (value & ((1 << width) - 1)).toString(2).padStart(width, "0").slice(-width); }
+function toSigned16(v){ v &= 0xFFFF; return (v & 0x8000) ? v - 0x10000 : v; }
+function fromSigned16(v){ return v & 0xFFFF; }
+
+/* Register getters/setters */
+function setPC(value){ pcBox.value = toOctalText(value & 0x0FFF, 4); }
+function getPC(){ return parseInt(normalize(pcBox.value, 4), 8) & 0x0FFF; }
+function setMAR(value){ marBox.value = toOctalText(value & 0x0FFF, 4); }
+function getMARValue(){ return parseInt(normalize(marBox.value, 4), 8) & 0x0FFF; }
+function setMBR(value){ mbrBox.value = toOctalText(value & 0xFFFF, 6); }
+function getMBR(){ return parseInt(normalize(mbrBox.value, 6), 8) & 0xFFFF; }
+function setIR(value){ irBox.value = toOctalText(value & 0xFFFF, 6); }
+function getIR(){ return parseInt(normalize(irBox.value, 6), 8) & 0xFFFF; }
+function setMFRBits(value){ mfrBox.value = toBinaryText(value & 0x0F, 4); }
+function getMFRBits(){ return parseInt((mfrBox.value || "0").replace(/[^01]/g,"") || "0", 2) & 0x0F; }
+function setCCBits(value){ ccBox.value = toBinaryText(value & 0x0F, 4); }
+function getCCBits(){ return parseInt((ccBox.value || "0").replace(/[^01]/g,"") || "0", 2) & 0x0F; }
+
+// CC display is 4 bits left-to-right: cc(0)=OVERFLOW, cc(1)=UNDERFLOW, cc(2)=DIVZERO, cc(3)=EQUALORNOT.
+function setCCBit(bitIndex, on){
+  let mask = 1 << (3 - bitIndex);
+  let cc = getCCBits();
+  cc = on ? (cc | mask) : (cc & ~mask);
+  setCCBits(cc);
+}
+function getCCBit(bitIndex){ return (getCCBits() & (1 << (3 - bitIndex))) !== 0; }
+function clearArithmeticCC(){ setCCBit(0,false); setCCBit(1,false); setCCBit(2,false); }
+
+function setGPR(r, value){ if(r < 0 || r > 3){ machineFault(4); return; } gprBoxes[r].value = toOctalText(value & 0xFFFF, 6); }
+function getGPR(r){ if(r < 0 || r > 3) return 0; return parseInt(normalize(gprBoxes[r].value, 6), 8) & 0xFFFF; }
+function setIXR(x, value){ if(x < 1 || x > 3){ machineFault(4); return; } ixrBoxes[x-1].value = toOctalText(value & 0xFFFF, 6); }
+function getIXR(x){ if(x < 1 || x > 3) return 0; return parseInt(normalize(ixrBoxes[x-1].value, 6), 8) & 0xFFFF; }
+
+function getMAR(){
+  let v = normalize(marBox.value,4);
+  marBox.value = v;
+  let n = parseInt(v,8);
+  if(n < 0 || n >= memory.length){ alert("MAR out of range"); return null; }
+  return n;
+}
+function incrementMAR(){ setMAR((getMARValue() + 1) % memory.length); }
+
+/* Front-panel Store / Load */
+function store(){
+  let addr = getMAR(); if(addr === null) return;
+  let valText = normalize(mbrBox.value,6);
+  mbrBox.value = valText;
+  memory[addr] = parseInt(valText, 8) & 0xFFFF;
+}
+function load(){ let addr = getMAR(); if(addr === null) return; setMBR(memory[addr] || 0); }
+function storePlus(){ store(); incrementMAR(); }
+function loadPlus(){ incrementMAR(); load(); }
+
+function setHaltLight(on){ halted = !!on; hltBtn.classList.toggle("halt-lit", halted); }
+function stopRun(){ running = false; if(runTimer){ clearInterval(runTimer); runTimer = null; } runBtn.textContent = "Run"; }
+
+function machineFault(code){
+  // code is the visible MFR bit pattern: 0001 reserved, 0010 trap, 0100 opcode, 1000 beyond memory.
+  setMFRBits(code);
+  memory[4] = (currentInstructionAddress ?? getPC()) & 0x0FFF; // save address of faulting instruction
+  const handler = memory[1] & 0x0FFF;  // location 1 points to machine fault handler
+  if(handler >= 6 && handler < memory.length){
+    setPC(handler);
+  }else{
+    stopRun();
+    setHaltLight(true);
+  }
+}
+function checkMemoryAddress(addr, forInstructionFetch=false){
+  if(addr < 0 || addr >= memory.length){ machineFault(8); return false; }
+  if(!forInstructionFetch && addr >= 0 && addr <= 5){ machineFault(1); return false; }
+  return true;
+}
+
+function decodeInstruction(instr){
+  return {
+    opcode: (instr >>> 10) & 0x3F,
+    r:      (instr >>> 8)  & 0x03,
+    ix:     (instr >>> 6)  & 0x03,
+    i:      (instr >>> 5)  & 0x01,
+    addr:    instr & 0x1F,
+    rx:     (instr >>> 8)  & 0x03,
+    ry:     (instr >>> 6)  & 0x03,
+    al:     (instr >>> 7)  & 0x01,
+    lr:     (instr >>> 6)  & 0x01,
+    count:   instr & 0x0F,
+    devid:   instr & 0x1F,
+    trapCode: instr & 0x0F
+  };
+}
+function computeEA(fields){
+  let ea = fields.addr & 0x1F;
+  if(fields.ix !== 0) ea = (ea + getIXR(fields.ix)) & 0x0FFF;
+  if(!checkMemoryAddress(ea)) return null;
+  if(fields.i === 1){
+    ea = memory[ea] & 0x0FFF;
+    if(!checkMemoryAddress(ea)) return null;
+  }
+  return ea;
+}
+
+// LDX/STX use the IX field to select the index register, but the selected
+// register is not also added into the effective-address calculation.
+function computeIndexEA(fields){
+  let ea = fields.addr & 0x1F;
+  if(!checkMemoryAddress(ea)) return null;
+  if(fields.i === 1){
+    ea = memory[ea] & 0x0FFF;
+    if(!checkMemoryAddress(ea)) return null;
+  }
+  return ea;
+}
+
+// LDA loads the effective address itself rather than reading memory there.
+// Therefore addresses 0-5 are legal results for LDA, although indirect
+// address lookup must still obey the normal protected-memory rules.
+function computeLDAEA(fields){
+  let ea = fields.addr & 0x1F;
+  if(fields.ix !== 0) ea = (ea + getIXR(fields.ix)) & 0x0FFF;
+  if(ea < 0 || ea >= memory.length){ machineFault(8); return null; }
+  if(fields.i === 1){
+    if(!checkMemoryAddress(ea)) return null;
+    ea = memory[ea] & 0x0FFF;
+    if(ea < 0 || ea >= memory.length){ machineFault(8); return null; }
+  }
+  return ea;
+}
+function fetchInstruction(){
+  const pc = getPC();
+  currentInstructionAddress = pc;
+  if(!checkMemoryAddress(pc, true)) return null;
+  setMAR(pc);
+  const instr = memory[pc] & 0xFFFF;
+  setMBR(instr);
+  setIR(instr);
+  setPC((pc + 1) & 0x0FFF);
+  return instr;
+}
+
+function setAddSubCC(aSigned, bSigned, resultSigned){
+  clearArithmeticCC();
+  if(resultSigned > 32767) setCCBit(0,true);
+  if(resultSigned < -32768) setCCBit(1,true);
+}
+function writeArithmeticResult(r, resultSigned){ setGPR(r, fromSigned16(resultSigned)); }
+
+/* Terminal */
+function appendTerminal(text){
+  terminalOutput.value += text;
+  terminalOutput.scrollTop = terminalOutput.scrollHeight;
+}
+function sendTerminalLine(){
+  const line = terminalInput.value;
+  appendTerminal("> " + line + "\n");
+  for(const ch of (line + "\n")) inputQueue.push(ch.charCodeAt(0) & 0xFF);
+  terminalInput.value = "";
+}
+terminalSendBtn.onclick = sendTerminalLine;
+terminalInput.addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); sendTerminalLine(); }});
+terminalClearBtn.onclick = () => { terminalOutput.value = ""; };
+
+/* Instruction execution */
+function executeInstruction(instr){
+  const f = decodeInstruction(instr);
+  const opcodeOct = f.opcode.toString(8).padStart(2, "0");
+
+  switch(opcodeOct){
+    case "00": setHaltLight(true); stopRun(); return; // HLT
+
+    case "01": { const ea = computeEA(f); if(ea === null) return; setGPR(f.r, memory[ea] & 0xFFFF); return; } // LDR
+    case "02": { const ea = computeEA(f); if(ea === null) return; memory[ea] = getGPR(f.r) & 0xFFFF; return; } // STR
+    case "03": { const ea = computeLDAEA(f); if(ea === null) return; setGPR(f.r, ea); return; } // LDA
+    case "41": { const x = f.ix; if(x < 1 || x > 3){ machineFault(4); return; } const ea = computeIndexEA(f); if(ea === null) return; setIXR(x, memory[ea] & 0xFFFF); return; } // LDX
+    case "42": { const x = f.ix; if(x < 1 || x > 3){ machineFault(4); return; } const ea = computeIndexEA(f); if(ea === null) return; memory[ea] = getIXR(x) & 0xFFFF; return; } // STX
+
+    case "04": { const ea = computeEA(f); if(ea === null) return; const a=toSigned16(getGPR(f.r)), b=toSigned16(memory[ea]); const res=a+b; setAddSubCC(a,b,res); writeArithmeticResult(f.r,res); return; } // AMR
+    case "05": { const ea = computeEA(f); if(ea === null) return; const a=toSigned16(getGPR(f.r)), b=toSigned16(memory[ea]); const res=a-b; setAddSubCC(a,-b,res); writeArithmeticResult(f.r,res); return; } // SMR
+    case "06": { const a=toSigned16(getGPR(f.r)), b=f.addr; const res=a+b; setAddSubCC(a,b,res); writeArithmeticResult(f.r,res); return; } // AIR
+    case "07": { const a=toSigned16(getGPR(f.r)), b=f.addr; const res=a-b; setAddSubCC(a,-b,res); writeArithmeticResult(f.r,res); return; } // SIR
+
+    case "10": { const ea = computeEA(f); if(ea === null) return; if(getGPR(f.r) === 0) setPC(ea); return; } // JZ
+    case "11": { const ea = computeEA(f); if(ea === null) return; if(getGPR(f.r) !== 0) setPC(ea); return; } // JNE
+    case "12": { const ea = computeEA(f); if(ea === null) return; if(getCCBit(f.r)) setPC(ea); return; } // JCC
+    case "13": { const ea = computeEA(f); if(ea === null) return; setPC(ea); return; } // JMA
+    case "14": { const ea = computeEA(f); if(ea === null) return; setGPR(3, getPC()); setPC(ea); return; } // JSR. PC already points to next instruction.
+    case "15": { setGPR(0, f.addr); setPC(getGPR(3) & 0x0FFF); return; } // RFS
+    case "16": { const res = toSigned16(getGPR(f.r)) - 1; setGPR(f.r, fromSigned16(res)); const ea = computeEA(f); if(ea === null) return; if(res > 0) setPC(ea); return; } // SOB
+    case "17": { const ea = computeEA(f); if(ea === null) return; if(toSigned16(getGPR(f.r)) >= 0) setPC(ea); return; } // JGE
+
+    case "30": { // TRAP code
+      if(f.trapCode < 0 || f.trapCode > 15){ machineFault(2); return; }
+      memory[2] = getPC() & 0x0FFF;
+      const tableBase = memory[0] & 0x0FFF;
+      const entryAddr = (tableBase + f.trapCode) & 0x0FFF;
+      if(!checkMemoryAddress(entryAddr)) return;
+      const target = memory[entryAddr] & 0x0FFF;
+      if(!checkMemoryAddress(target, true)) return;
+      setPC(target);
+      return;
+    }
+
+    case "31": { // SRC
+      const r=f.r, count=f.count & 0x0F, lr=f.lr, al=f.al;
+      let v=getGPR(r);
+      if(count === 0) return;
+      if(lr === 1){
+        const lost = (v >>> (16-count)) & ((1<<count)-1);
+        v = (v << count) & 0xFFFF;
+        if(lost !== 0) setCCBit(0,true);
+      }else{
+        const lost = v & ((1<<count)-1);
+        if(al === 0){ // arithmetic right: preserve sign
+          v = fromSigned16(toSigned16(v) >> count);
+        }else{
+          v = (v >>> count) & 0xFFFF;
+        }
+        if(lost !== 0) setCCBit(1,true);
+      }
+      setGPR(r,v); return;
+    }
+    case "32": { // RRC
+      const r=f.r, count=(f.count & 0x0F) % 16, lr=f.lr;
+      let v=getGPR(r);
+      if(count === 0) return;
+      if(lr === 1) v = ((v << count) | (v >>> (16-count))) & 0xFFFF;
+      else v = ((v >>> count) | (v << (16-count))) & 0xFFFF;
+      setGPR(r,v); return;
+    }
+
+    case "61": { // IN
+      if(f.devid !== 0 && f.devid !== 2){ machineFault(4); return; }
+      const ch = inputQueue.length ? inputQueue.shift() : 0;
+      setGPR(f.r, ch & 0xFF);
+      return;
+    }
+    case "62": { // OUT
+      if(f.devid !== 1){ machineFault(4); return; }
+      appendTerminal(String.fromCharCode(getGPR(f.r) & 0xFF));
+      return;
+    }
+    case "63": { // CHK
+      let ready = 0;
+      if(f.devid === 0 || f.devid === 2) ready = inputQueue.length > 0 ? 1 : 0;
+      else if(f.devid === 1) ready = 1;
+      else ready = 0;
+      setGPR(f.r, ready);
+      return;
+    }
+
+    case "70": { // MLT
+      if((f.rx !== 0 && f.rx !== 2) || (f.ry !== 0 && f.ry !== 2)){ machineFault(4); return; }
+      const prod = (toSigned16(getGPR(f.rx)) * toSigned16(getGPR(f.ry))) | 0;
+      const unsigned = prod >>> 0;
+      setGPR(f.rx, (unsigned >>> 16) & 0xFFFF);
+      setGPR(f.rx+1, unsigned & 0xFFFF);
+      setCCBit(0, prod > 0x7FFFFFFF || prod < -0x80000000);
+      return;
+    }
+    case "71": { // DVD
+      if((f.rx !== 0 && f.rx !== 2) || (f.ry !== 0 && f.ry !== 2)){ machineFault(4); return; }
+      const divisor = toSigned16(getGPR(f.ry));
+      if(divisor === 0){ setCCBit(2,true); return; }
+      const dividend = toSigned16(getGPR(f.rx));
+      setGPR(f.rx, fromSigned16(Math.trunc(dividend / divisor)));
+      setGPR(f.rx+1, fromSigned16(dividend % divisor));
+      setCCBit(2,false);
+      return;
+    }
+    case "72": setCCBit(3, getGPR(f.rx) === getGPR(f.ry)); return; // TRR
+    case "73": setGPR(f.rx, getGPR(f.rx) & getGPR(f.ry)); return; // AND
+    case "74": setGPR(f.rx, getGPR(f.rx) | getGPR(f.ry)); return; // ORR
+    case "75": setGPR(f.rx, (~getGPR(f.rx)) & 0xFFFF); return; // NOT
+
+    // Floating point/vector opcodes intentionally not implemented per request: 33-37, 50-51.
+    default: machineFault(4); return;
+  }
+}
+
+function singleStep(){ if(halted) return; const instr = fetchInstruction(); if(instr === null) return; executeInstruction(instr); }
+function runMachine(){
+  if(halted){ setHaltLight(false); setMFRBits(0); }
+  if(running){ stopRun(); return; }
+  running = true;
+  runBtn.textContent = "Stop";
+  runTimer = setInterval(() => { if(halted){ stopRun(); return; } singleStep(); }, 120);
+}
+
+/* INIT LOAD */
+function loadMemoryFromText(text){
+  const lines = text.split(/\r?\n/);
+  for(let lineNumber = 1; lineNumber <= lines.length; lineNumber++){
+    const rawLine = lines[lineNumber - 1].split(';')[0].trim();
+    if(rawLine === "") continue;
+    const parts = rawLine.split(/\s+/);
+    if(parts.length < 2) throw new Error("Load file format error on line " + lineNumber + ": expected address and value.");
+    const addrText = parts[0], valueText = parts[1];
+    if(!/^[0-7]+$/.test(addrText)) throw new Error("Invalid octal address on line " + lineNumber + ": " + addrText);
+    if(!/^[0-7]+$/.test(valueText)) throw new Error("Invalid octal data value on line " + lineNumber + ": " + valueText);
+    const addr = parseInt(addrText, 8), value = parseInt(valueText, 8);
+    if(addr < 0 || addr >= memory.length) throw new Error("Address out of range on line " + lineNumber + ": " + addrText);
+    if(value < 0 || value > 0xFFFF) throw new Error("Data value out of 16-bit range on line " + lineNumber + ": " + valueText);
+    memory[addr] = value & 0xFFFF;
+  }
+}
+function resetMachine(){
+  stopRun();
+  for(let i=0;i<memory.length;i++) memory[i]=0;
+  document.querySelectorAll('input').forEach(inp => {
+    if(inp === terminalInput) return;
+    if(inp === pcBox || inp === marBox) inp.value = "0000";
+    else if(inp === mfrBox || inp === ccBox) inp.value = "0000";
+    else inp.value = "000000";
+  });
+  inputQueue = [];
+  currentInstructionAddress = null;
+  setHaltLight(false);
+  updateWord();
+}
+function initLoad(){
+  resetMachine();
+  const fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.accept = ".asm,.txt,text/plain";
+  fileInput.onchange = (event) => {
+    const file = event.target.files && event.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => { try{ loadMemoryFromText(String(reader.result || "")); alert("Memory load complete."); } catch(err){ alert("Load failed: " + err.message); } };
+    reader.onerror = () => alert("Load failed: could not read file.");
+    reader.readAsText(file);
+  };
+  fileInput.click();
+}
+
+/* BUTTONS */
+storeBtn.onclick = store;
+storePlusBtn.onclick = storePlus;
+loadMemoryBtn.onclick = load;
+loadPlusBtn.onclick = loadPlus;
+ssBtn.onclick = singleStep;
+runBtn.onclick = runMachine;
+hltBtn.onclick = () => { stopRun(); setHaltLight(true); };
+initBtn.onclick = initLoad;
+
+/* BIT LOGIC */
+function updateWord(){
+  let arr = new Array(16).fill("0");
+  bits.forEach(b => { let i = Number(b.dataset.bit); arr[i] = b.classList.contains("on") ? "1" : "0"; });
+  let bin = arr.join("");
+  let oct = parseInt(bin,2).toString(8).padStart(6,"0");
+  display.textContent = bin + " / " + oct;
+}
+bits.forEach(b => { b.onclick = () => { b.classList.toggle("on"); updateWord(); }; });
+
+/* LOAD BUTTONS */
+document.querySelectorAll(".load-btn").forEach(btn => {
+  btn.onclick = () => {
+    let field = btn.parentElement.querySelector(".load-target");
+    let oct = display.textContent.split("/")[1].trim();
+    let max = field.maxLength;
+    field.value = oct.slice(-max).padStart(max,"0");
+  };
+});
+
+setPC(getPC()); setMAR(getMARValue()); setMBR(getMBR()); setIR(getIR()); setMFRBits(getMFRBits()); setCCBits(getCCBits()); updateWord();
+</script>
+
+
+</body></html>
