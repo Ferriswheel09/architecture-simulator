@@ -272,26 +272,65 @@ const cache = Array.from({length: 8}, () => ({
 
 // Necessary for proper reads and writes
 function calculateCacheAddress(address){
-  if(typeof address !== 'number'){
-    throw new Error("Address not a number")
+  if(!Number.isInteger(address) || address < 0 || address >= memory.length){
+    throw new RangeError("Cache address must be an integer within installed memory.");
   }
 
-  block = Math.floor(address/4)
-
-  let cache_addressing = {
-    block: block,
-    line_index: block % 8,
-    tag: Math.floor(block / 8),
+  const block = Math.floor(address / 4);
+  return {
+    block,
+    line_index: block % cache.length,
+    tag: Math.floor(block / cache.length),
+    block_start: block * 4,
     word_offset: address % 4
+  };
+}
+
+function getCacheLine(address){
+  const location = calculateCacheAddress(address);
+  const line = cache[location.line_index];
+
+  if(line.valid && line.tag === location.tag){
+    return {line, location};
   }
 
+  if(line.valid && line.dirty){
+    const oldBlockStart = (line.tag * cache.length + location.line_index) * 4;
+    for(let offset = 0; offset < line.word_slots.length; offset++){
+      memory[oldBlockStart + offset] = line.word_slots[offset] & 0xFFFF;
+    }
+  }
 
-  return cache_addressing;
+  for(let offset = 0; offset < line.word_slots.length; offset++){
+    line.word_slots[offset] = memory[location.block_start + offset] & 0xFFFF;
+  }
+  line.tag = location.tag;
+  line.valid = true;
+  line.dirty = false;
+  return {line, location};
 }
 
 // Cache Helpers
-function cacheReader(){}
-function cacheWriter(){}
+function cacheReader(address){
+  const {line, location} = getCacheLine(address);
+  return line.word_slots[location.word_offset] & 0xFFFF;
+}
+
+function cacheWriter(address, value){
+  const {line, location} = getCacheLine(address);
+  line.word_slots[location.word_offset] = value & 0xFFFF;
+  line.dirty = true;
+  return line.word_slots[location.word_offset];
+}
+
+function clearCache(){
+  cache.forEach(line => {
+    line.valid = false;
+    line.tag = null;
+    line.word_slots.fill(0);
+    line.dirty = false;
+  });
+}
 
 let halted = false;
 let running = false;
@@ -361,9 +400,9 @@ function store(){
   let addr = getMAR(); if(addr === null) return;
   let valText = normalize(mbrBox.value,6);
   mbrBox.value = valText;
-  memory[addr] = parseInt(valText, 8) & 0xFFFF;
+  cacheWriter(addr, parseInt(valText, 8));
 }
-function load(){ let addr = getMAR(); if(addr === null) return; setMBR(memory[addr] || 0); }
+function load(){ let addr = getMAR(); if(addr === null) return; setMBR(cacheReader(addr)); }
 function storePlus(){ store(); incrementMAR(); }
 function loadPlus(){ incrementMAR(); load(); }
 
@@ -409,7 +448,7 @@ function computeEA(fields){
   if(fields.ix !== 0) ea = (ea + getIXR(fields.ix)) & 0x0FFF;
   if(!checkMemoryAddress(ea)) return null;
   if(fields.i === 1){
-    ea = memory[ea] & 0x0FFF;
+    ea = cacheReader(ea) & 0x0FFF;
     if(!checkMemoryAddress(ea)) return null;
   }
   return ea;
@@ -421,7 +460,7 @@ function computeIndexEA(fields){
   let ea = fields.addr & 0x1F;
   if(!checkMemoryAddress(ea)) return null;
   if(fields.i === 1){
-    ea = memory[ea] & 0x0FFF;
+    ea = cacheReader(ea) & 0x0FFF;
     if(!checkMemoryAddress(ea)) return null;
   }
   return ea;
@@ -436,7 +475,7 @@ function computeLDAEA(fields){
   if(ea < 0 || ea >= memory.length){ machineFault(8); return null; }
   if(fields.i === 1){
     if(!checkMemoryAddress(ea)) return null;
-    ea = memory[ea] & 0x0FFF;
+    ea = cacheReader(ea) & 0x0FFF;
     if(ea < 0 || ea >= memory.length){ machineFault(8); return null; }
   }
   return ea;
@@ -446,7 +485,7 @@ function fetchInstruction(){
   currentInstructionAddress = pc;
   if(!checkMemoryAddress(pc, true)) return null;
   setMAR(pc);
-  const instr = memory[pc] & 0xFFFF;
+  const instr = cacheReader(pc);
   setMBR(instr);
   setIR(instr);
   setPC((pc + 1) & 0x0FFF);
@@ -483,14 +522,14 @@ function executeInstruction(instr){
   switch(opcodeOct){
     case "00": setHaltLight(true); stopRun(); return; // HLT
 
-    case "01": { const ea = computeEA(f); if(ea === null) return; setGPR(f.r, memory[ea] & 0xFFFF); return; } // LDR
-    case "02": { const ea = computeEA(f); if(ea === null) return; memory[ea] = getGPR(f.r) & 0xFFFF; return; } // STR
+    case "01": { const ea = computeEA(f); if(ea === null) return; setGPR(f.r, cacheReader(ea)); return; } // LDR
+    case "02": { const ea = computeEA(f); if(ea === null) return; cacheWriter(ea, getGPR(f.r)); return; } // STR
     case "03": { const ea = computeLDAEA(f); if(ea === null) return; setGPR(f.r, ea); return; } // LDA
-    case "41": { const x = f.ix; if(x < 1 || x > 3){ machineFault(4); return; } const ea = computeIndexEA(f); if(ea === null) return; setIXR(x, memory[ea] & 0xFFFF); return; } // LDX
-    case "42": { const x = f.ix; if(x < 1 || x > 3){ machineFault(4); return; } const ea = computeIndexEA(f); if(ea === null) return; memory[ea] = getIXR(x) & 0xFFFF; return; } // STX
+    case "41": { const x = f.ix; if(x < 1 || x > 3){ machineFault(4); return; } const ea = computeIndexEA(f); if(ea === null) return; setIXR(x, cacheReader(ea)); return; } // LDX
+    case "42": { const x = f.ix; if(x < 1 || x > 3){ machineFault(4); return; } const ea = computeIndexEA(f); if(ea === null) return; cacheWriter(ea, getIXR(x)); return; } // STX
 
-    case "04": { const ea = computeEA(f); if(ea === null) return; const a=toSigned16(getGPR(f.r)), b=toSigned16(memory[ea]); const res=a+b; setAddSubCC(a,b,res); writeArithmeticResult(f.r,res); return; } // AMR
-    case "05": { const ea = computeEA(f); if(ea === null) return; const a=toSigned16(getGPR(f.r)), b=toSigned16(memory[ea]); const res=a-b; setAddSubCC(a,-b,res); writeArithmeticResult(f.r,res); return; } // SMR
+    case "04": { const ea = computeEA(f); if(ea === null) return; const a=toSigned16(getGPR(f.r)), b=toSigned16(cacheReader(ea)); const res=a+b; setAddSubCC(a,b,res); writeArithmeticResult(f.r,res); return; } // AMR
+    case "05": { const ea = computeEA(f); if(ea === null) return; const a=toSigned16(getGPR(f.r)), b=toSigned16(cacheReader(ea)); const res=a-b; setAddSubCC(a,-b,res); writeArithmeticResult(f.r,res); return; } // SMR
     case "06": { const a=toSigned16(getGPR(f.r)), b=f.addr; const res=a+b; setAddSubCC(a,b,res); writeArithmeticResult(f.r,res); return; } // AIR
     case "07": { const a=toSigned16(getGPR(f.r)), b=f.addr; const res=a-b; setAddSubCC(a,-b,res); writeArithmeticResult(f.r,res); return; } // SIR
 
@@ -505,11 +544,11 @@ function executeInstruction(instr){
 
     case "30": { // TRAP code
       if(f.trapCode < 0 || f.trapCode > 15){ machineFault(2); return; }
-      memory[2] = getPC() & 0x0FFF;
-      const tableBase = memory[0] & 0x0FFF;
+      cacheWriter(2, getPC() & 0x0FFF);
+      const tableBase = cacheReader(0) & 0x0FFF;
       const entryAddr = (tableBase + f.trapCode) & 0x0FFF;
       if(!checkMemoryAddress(entryAddr)) return;
-      const target = memory[entryAddr] & 0x0FFF;
+      const target = cacheReader(entryAddr) & 0x0FFF;
       if(!checkMemoryAddress(target, true)) return;
       setPC(target);
       return;
@@ -617,10 +656,12 @@ function loadMemoryFromText(text){
     if(value < 0 || value > 0xFFFF) throw new Error("Data value out of 16-bit range on line " + lineNumber + ": " + valueText);
     memory[addr] = value & 0xFFFF;
   }
+  clearCache();
 }
 function resetMachine(){
   stopRun();
   for(let i=0;i<memory.length;i++) memory[i]=0;
+  clearCache();
   document.querySelectorAll('input').forEach(inp => {
     if(inp === terminalInput) return;
     if(inp === pcBox || inp === marBox) inp.value = "0000";
