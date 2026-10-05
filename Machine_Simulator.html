@@ -270,6 +270,29 @@ const cache = Array.from({length: 8}, () => ({
   dirty: false
 }));
 
+// Necessary for proper reads and writes
+function calculateCacheAddress(address){
+  if(typeof address !== 'number'){
+    throw new Error("Address not a number")
+  }
+
+  block = Math.floor(address/4)
+
+  let cache_addressing = {
+    block: block,
+    line_index: block % 8,
+    tag: Math.floor(block / 8),
+    word_offset: address % 4
+  }
+
+
+  return cache_addressing;
+}
+
+// Cache Helpers
+function cacheReader(){}
+function cacheWriter(){}
+
 let halted = false;
 let running = false;
 let runTimer = null;
