@@ -100,6 +100,19 @@
       padding:10px;
     }
 
+    .cache-panel {
+      margin-top:18px;
+      padding:10px;
+      background:rgba(255,255,255,0.78);
+      overflow-x:auto;
+    }
+    .cache-heading { display:flex; justify-content:space-between; gap:12px; margin-bottom:8px; font-weight:bold; }
+    #cacheStats { font:12px monospace; white-space:nowrap; }
+    .cache-table { width:100%; min-width:760px; border-collapse:collapse; font:12px monospace; }
+    .cache-table th, .cache-table td { padding:5px 4px; border:1px solid #999; text-align:center; }
+    .cache-table th { background:#ddd; }
+    .cache-invalid { color:#888; }
+
     .terminal {
       width:350px;
       background:#1e1e1e;
@@ -157,7 +170,7 @@
 </div>
 </div>
 <!-- CONTROLS -->
-<div class="mid-controls" style="; margin-top:10px;">
+<div class="mid-controls" style="margin-top:10px;">
 <div class="control-stack">
 <button class="btn" id="storeBtn">Store</button>
 <button class="btn" id="storePlusBtn">St+</button>
@@ -218,6 +231,13 @@
 </div>
 <div class="word-display" id="wordDisplay">0000000000000000 / 000000</div>
 </div>
+<section class="cache-panel" aria-labelledby="cacheHeading">
+  <div class="cache-heading"><span id="cacheHeading">Direct-Mapped Cache · 8 Lines × 4 Words</span><span id="cacheStats">0 hits · 0 misses</span></div>
+  <table class="cache-table">
+    <thead><tr><th>Line</th><th>Valid</th><th>Tag</th><th>Word 0</th><th>Word 1</th><th>Word 2</th><th>Word 3</th><th>Dirty</th></tr></thead>
+    <tbody id="cacheRows"></tbody>
+  </table>
+</section>
 </div>
 <div class="terminal">
   <h2>Console Terminal</h2>
@@ -269,6 +289,8 @@ const cache = Array.from({length: 8}, () => ({
   word_slots: new Array(4).fill(0), 
   dirty: false
 }));
+let cacheHits = 0;
+let cacheMisses = 0;
 
 // Necessary for proper reads and writes
 function calculateCacheAddress(address){
@@ -291,9 +313,11 @@ function getCacheLine(address){
   const line = cache[location.line_index];
 
   if(line.valid && line.tag === location.tag){
+    cacheHits++;
     return {line, location};
   }
 
+  cacheMisses++;
   if(line.valid && line.dirty){
     const oldBlockStart = (line.tag * cache.length + location.line_index) * 4;
     for(let offset = 0; offset < line.word_slots.length; offset++){
@@ -330,6 +354,20 @@ function clearCache(){
     line.word_slots.fill(0);
     line.dirty = false;
   });
+  cacheHits = 0;
+  cacheMisses = 0;
+  updateCacheDisplay();
+}
+
+function updateCacheDisplay(){
+  const rows = document.getElementById("cacheRows");
+  if(!rows) return;
+  rows.innerHTML = cache.map((line, index) => {
+    const tag = line.valid ? toOctalText(line.tag, 2) : "--";
+    const words = line.word_slots.map(word => `<td>${toOctalText(word, 6)}</td>`).join("");
+    return `<tr${line.valid ? "" : " class=\"cache-invalid\""}><td>${index}</td><td>${line.valid ? 1 : 0}</td><td>${tag}</td>${words}<td>${line.dirty ? 1 : 0}</td></tr>`;
+  }).join("");
+  document.getElementById("cacheStats").textContent = `${cacheHits} hits · ${cacheMisses} misses`;
 }
 
 let halted = false;
@@ -401,8 +439,9 @@ function store(){
   let valText = normalize(mbrBox.value,6);
   mbrBox.value = valText;
   cacheWriter(addr, parseInt(valText, 8));
+  updateCacheDisplay();
 }
-function load(){ let addr = getMAR(); if(addr === null) return; setMBR(cacheReader(addr)); }
+function load(){ let addr = getMAR(); if(addr === null) return; setMBR(cacheReader(addr)); updateCacheDisplay(); }
 function storePlus(){ store(); incrementMAR(); }
 function loadPlus(){ incrementMAR(); load(); }
 
@@ -631,7 +670,7 @@ function executeInstruction(instr){
   }
 }
 
-function singleStep(){ if(halted) return; const instr = fetchInstruction(); if(instr === null) return; executeInstruction(instr); }
+function singleStep(){ if(halted) return; const instr = fetchInstruction(); if(instr === null){ updateCacheDisplay(); return; } executeInstruction(instr); updateCacheDisplay(); }
 function runMachine(){
   if(halted){ setHaltLight(false); setMFRBits(0); }
   if(running){ stopRun(); return; }
@@ -719,7 +758,7 @@ document.querySelectorAll(".load-btn").forEach(btn => {
   };
 });
 
-setPC(getPC()); setMAR(getMARValue()); setMBR(getMBR()); setIR(getIR()); setMFRBits(getMFRBits()); setCCBits(getCCBits()); updateWord();
+setPC(getPC()); setMAR(getMARValue()); setMBR(getMBR()); setIR(getIR()); setMFRBits(getMFRBits()); setCCBits(getCCBits()); updateWord(); updateCacheDisplay();
 </script>
 
 
