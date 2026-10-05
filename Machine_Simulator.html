@@ -262,6 +262,14 @@ const terminalClearBtn = document.getElementById("terminalClearBtn");
 /* MEMORY */
 const memory = new Array(2048).fill(0);
 
+// Cache Implementation 
+const cache = Array.from({length: 8}, () => ({
+  valid: false, 
+  tag: null, 
+  word_slots: new Array(4).fill(0), 
+  dirty: false
+}));
+
 let halted = false;
 let running = false;
 let runTimer = null;
