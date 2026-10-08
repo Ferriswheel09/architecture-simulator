@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>C6461 Operator Console</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f1f2ef; color: #252c29; font: 14px Arial, sans-serif; }
+    header, main { width: min(1120px, calc(100% - 32px)); margin: auto; }
+    header { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 20px 0; border-bottom: 2px solid #a64b37; }
+    h1 { margin: 0; font-size: 20px; }
+    h2 { margin: 0 0 12px; font-size: 14px; }
+    .brand { color: #a64b37; font-size: 11px; font-weight: bold; }
+    .machine-status { margin-top: 4px; color: #52625b; font: bold 11px monospace; }
+    .transport { display: flex; flex-wrap: wrap; gap: 6px; }
+    main { padding: 18px 0 28px; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, .95fr); gap: 20px 28px; }
+    .section-title { padding-bottom: 8px; border-bottom: 1px solid #cbd0cc; }
+    .register-row { display: grid; grid-template-columns: 50px 72px minmax(70px, 1fr) 38px; gap: 6px; align-items: center; margin: 8px 0; }
+    .register-row[data-kind="index"][data-register="1"] { margin-top: 26px; }
+    .register-name, .system-label { font-weight: bold; text-align: right; }
+    .register-value, .special-value { font: 14px monospace; text-align: center; }
+    input { width: 100%; min-width: 0; height: 30px; padding: 4px 6px; border: 1px solid #aeb6b1; background: #fff; color: #252c29; font: 13px monospace; text-align: center; }
+    input:focus { outline: 2px solid #d28a72; outline-offset: 1px; }
+    button { min-height: 30px; padding: 4px 9px; border: 1px solid #b9c0bb; background: #fff; color: #252c29; font-size: 12px; font-weight: bold; cursor: pointer; }
+    button:hover { border-color: #a64b37; }
+    button:disabled { opacity: .5; cursor: default; }
+    .primary { border-color: #a64b37; background: #a64b37; color: #fff; }
+    .primary:hover { background: #873b2b; color: #fff; }
+    .control-row { display: grid; grid-template-columns: 42px 68px minmax(75px, 1fr) 38px; gap: 6px; align-items: center; margin: 9px 0; }
+    .control-row.plain { grid-template-columns: 42px 100px; }
+    .memory-actions { display: flex; gap: 6px; margin: 14px 0 20px; }
+    .switch-area { padding: 12px 0; border-top: 1px solid #cbd0cc; border-bottom: 1px solid #cbd0cc; }
+    .bit-switches { display: flex; flex-wrap: wrap; gap: 4px; }
+    .bit-switch { width: 29px; padding: 3px; font: 12px monospace; }
+    .bit-switch.on { border-color: #a64b37; background: #f4ded7; }
+    .switch-readout { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; font: 13px monospace; }
+    .memory { grid-column: 1 / -1; }
+    .memory-title { display: flex; justify-content: space-between; gap: 12px; margin: 16px 0 6px; font-weight: bold; }
+    .memory-hint, .step-count { color: #69746e; font-size: 11px; }
+    .memory-list { max-height: 200px; overflow: auto; border-top: 1px solid #cbd0cc; border-bottom: 1px solid #cbd0cc; }
+    table { width: 100%; border-collapse: collapse; font: 12px monospace; }
+    td, th { padding: 5px 8px; border-bottom: 1px solid #e0e3e0; text-align: left; }
+    th { position: sticky; top: 0; background: #e8eae7; }
+    td:last-child, th:last-child { text-align: right; }
+    .current-address { background: #f8e8e2; }
+    .trace { grid-column: 1 / -1; }
+    .trace-list { max-height: 220px; overflow: auto; margin: 8px 0 0; padding: 8px 12px; border: 1px solid #d5dad6; background: #fff; list-style: none; font: 12px/1.6 monospace; }
+    .trace-list li { display: grid; grid-template-columns: 48px 62px 1fr; gap: 8px; }
+    .trace-list span { color: #69746e; }
+    #error-message { min-height: 18px; margin: 6px 0 0; color: #a13924; font-size: 12px; }
+    @media (max-width: 760px) { header { align-items: flex-start; flex-direction: column; gap: 12px; } .layout { grid-template-columns: 1fr; } .memory, .trace { grid-column: auto; } }
+    @media (max-width: 420px) { header, main { width: calc(100% - 20px); } .register-row { grid-template-columns: 42px 60px minmax(60px, 1fr) 36px; gap: 4px; } .control-row { grid-template-columns: 36px 58px minmax(60px, 1fr) 36px; gap: 4px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div><div class="brand">GWU · CSCI 6461</div><h1>C6461 Operator Console</h1><div class="machine-status" aria-live="polite"><span id="status-text">READY</span></div></div>
+    <nav class="transport" aria-label="Machine controls">
+      <button id="ipl-button" class="primary" type="button">Init</button>
+      <button id="run-button" type="button">Run</button>
+      <button id="step-button" type="button">Single Step</button>
+      <button id="halt-button" type="button">Halt</button>
+    </nav>
+  </header>
+  <main>
+    <div class="layout">
+      <section aria-labelledby="register-heading">
+        <h2 id="register-heading" class="section-title">GPR and index registers</h2>
+        <div id="register-list"></div>
+      </section>
+      <section aria-labelledby="machine-heading">
+        <h2 id="machine-heading" class="section-title">Machine state</h2>
+        <form id="pc-form" class="control-row"><label class="system-label" for="pc-input">PC</label><span></span><input id="pc-input" inputmode="numeric" value="0"><button type="submit">Load</button></form>
+        <div class="control-row"><label class="system-label" for="memory-address">MAR</label><code id="mar-value" class="special-value">0000</code><input id="memory-address" inputmode="numeric" value="0"><button id="select-address" type="button">Load</button></div>
+        <div class="control-row"><label class="system-label" for="memory-value">MBR</label><code id="mbr-value" class="special-value">000000</code><input id="memory-value" inputmode="numeric" value="0"><button id="load-mbr" type="button">Load</button></div>
+        <div class="control-row plain"><span class="system-label">IR</span><code id="ir-value" class="special-value">000000</code></div>
+        <div class="control-row plain"><span class="system-label">MFR</span><code id="mfr-value" class="special-value">0000</code></div>
+        <div class="control-row plain"><span class="system-label">CC</span><code id="cc-value" class="special-value">0000</code></div>
+        <div class="memory-actions"><button id="read-memory" type="button">Read Memory</button><button id="write-memory" type="button">Store Memory</button></div>
+        <section class="switch-area" aria-label="Data switches">
+          <h2>Word switches</h2>
+          <div id="bit-switches" class="bit-switches"></div>
+          <div class="switch-readout"><span id="switch-binary">0000000000000000</span><span>/</span><span id="switch-octal">000000</span><button id="load-switches" type="button">Load MBR</button></div>
+        </section>
+      </section>
+      <section class="memory" aria-labelledby="memory-heading">
+        <div class="memory-title"><span id="memory-heading">Memory · 2048 words</span><span>MAR contents: <code id="mar-contents">000000</code></span></div>
+        <div id="memory-phase" class="memory-hint">Ready</div>
+        <div class="memory-list"><table><thead><tr><th>Address</th><th>Octal</th><th>Decimal</th></tr></thead><tbody id="memory-rows"></tbody></table></div>
+      </section>
+      <section class="trace" aria-labelledby="trace-heading">
+        <h2 id="trace-heading">Instruction trace <span id="step-count" class="step-count">0 steps</span></h2>
+        <ol id="trace-list" class="trace-list" aria-live="polite"><li>Ready. Press Init to load the demo.</li></ol>
+        <p id="error-message" role="status"></p>
+      </section>
+    </div>
+  </main>
+  <script type="module" src="simulator.mjs"></script>
+</body>
+</html>
