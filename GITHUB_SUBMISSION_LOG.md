@@ -14,4 +14,5 @@
 | `ce7ad42` | 2026-10-05 | Added Testing Suite | Lintao Mei |
 | `c2aafa8` | 2026-10-08 | Merge pull request #1 from `feature/project1-base` | Faris Jiwad |
 | `93912d3` | 2026-10-08 | Remove obsolete simulator artifacts from cache hand-in | Faris Jiwad |
+| `9d05ce8` | 2026-10-08 | Add rubric-aligned cache HTML test harness | Faris Jiwad |
 
