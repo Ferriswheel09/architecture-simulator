@@ -10,4 +10,9 @@ The CPU fetch, indirect-address lookup, memory instructions, arithmetic memory o
 
 - `Machine_Simulator.html`: cache state and address mapping are next to the `memory` array; cache operations follow; `store`/`load` wire the front panel to the cache; effective-address and instruction-fetch helpers route CPU accesses through it; instruction cases use the same helpers; `singleStep` refreshes the display; `loadMemoryFromText` and `resetMachine` invalidate cache state.
 - `CACHE_TESTS.md`: functional cache test cases, including mapping, fill, hit, write allocation, dirty conflict write-back, front-panel access, CPU access, display, reset, and bounds.
+- `test/CACHE_TEST_HARNESS.html`: standalone runnable HTML test page. It sends a narrow `postMessage` request to the simulator iframe; `runCacheHarnessTests` executes 14 checks inside the simulator and restores the prior machine state.
 - `USER_GUIDE.md`: browser launch, console controls, file format, and cache behavior.
+
+## Original-to-updated HTML comparison
+
+The table in `HTML_CHANGE_COMPARISON.md` compares the original simulator HTML at commit `a030f02` with the cache-enhanced implementation. The harness adds test-only messaging to the same page; it does not change normal operator controls or cache behavior.

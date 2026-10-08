@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>C6461 Cache Test Harness</title>
+  <style>
+    :root { color-scheme: light; --ink: #202a27; --muted: #61706a; --line: #cbd3ce; --paper: #f2f4f1; --panel: #fff; --accent: #a64b37; --pass: #17683d; --fail: #a12f20; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.5 Georgia, "Times New Roman", serif; }
+    main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 26px 0 40px; }
+    header { display: flex; align-items: end; justify-content: space-between; gap: 20px; border-bottom: 2px solid var(--accent); padding-bottom: 16px; }
+    h1 { margin: 0; font-size: 28px; line-height: 1.1; }
+    h2 { margin: 0 0 10px; font: bold 15px/1.3 Arial, sans-serif; }
+    p { margin: 8px 0 0; color: var(--muted); }
+    button { min-height: 38px; border: 0; padding: 8px 14px; background: var(--accent); color: white; font: bold 13px Arial, sans-serif; cursor: pointer; }
+    button:disabled { opacity: .55; cursor: wait; }
+    .status { margin: 18px 0 10px; font: bold 13px Arial, sans-serif; }
+    .status.pass { color: var(--pass); }
+    .status.fail { color: var(--fail); }
+    .results { overflow-x: auto; background: var(--panel); border-block: 1px solid var(--line); }
+    table { width: 100%; border-collapse: collapse; font: 13px/1.4 Arial, sans-serif; }
+    th, td { padding: 9px 12px; border-bottom: 1px solid #e3e8e4; text-align: left; vertical-align: top; }
+    th { background: #e8ede9; }
+    td:nth-child(2) { width: 90px; font-weight: bold; }
+    .pass-text { color: var(--pass); }
+    .fail-text { color: var(--fail); }
+    .simulator { margin-top: 26px; }
+    iframe { display: block; width: 100%; height: 730px; border: 1px solid var(--line); background: white; }
+    @media (max-width: 640px) { main { width: calc(100% - 20px); padding-top: 18px; } header { align-items: start; flex-direction: column; } h1 { font-size: 24px; } iframe { height: 680px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>C6461 Cache Test Harness</h1>
+        <p>Automated checks run against the simulator and restore its memory and console state afterward.</p>
+      </div>
+      <button id="run-tests" type="button" disabled>Loading simulator...</button>
+    </header>
+    <p id="test-status" class="status" role="status" aria-live="polite">Waiting for simulator page.</p>
+    <section class="results" aria-label="Test results">
+      <table>
+        <thead><tr><th>Test</th><th>Result</th><th>Details</th></tr></thead>
+        <tbody id="result-rows"><tr><td colspan="3">Run the harness to populate results.</td></tr></tbody>
+      </table>
+    </section>
+    <section class="simulator" aria-labelledby="simulator-heading">
+      <h2 id="simulator-heading">Simulator Under Test</h2>
+      <iframe id="simulator-frame" src="../Machine_Simulator.html" title="C6461 machine simulator"></iframe>
+    </section>
+  </main>
+  <script>
+    const frame = document.getElementById("simulator-frame");
+    const runButton = document.getElementById("run-tests");
+    const status = document.getElementById("test-status");
+    const resultRows = document.getElementById("result-rows");
+    let requestId = 0;
+    let timeoutId = null;
+
+    frame.addEventListener("load", () => {
+      runButton.disabled = false;
+      runButton.textContent = "Run All Tests";
+      status.textContent = "Simulator ready. Select Run All Tests.";
+    });
+
+    runButton.addEventListener("click", () => {
+      requestId += 1;
+      runButton.disabled = true;
+      status.className = "status";
+      status.textContent = "Running cache, console, CPU, and object-loader checks...";
+      resultRows.replaceChildren();
+      const id = requestId;
+      timeoutId = setTimeout(() => {
+        runButton.disabled = false;
+        status.className = "status fail";
+        status.textContent = "Timed out waiting for the simulator. Reload this page and try again.";
+      }, 10000);
+      frame.contentWindow.postMessage({type: "C6461_CACHE_TEST_RUN", id}, "*");
+    });
+
+    window.addEventListener("message", event => {
+      if(event.source !== frame.contentWindow || !event.data || event.data.type !== "C6461_CACHE_TEST_RESULTS" || event.data.id !== requestId) return;
+      clearTimeout(timeoutId);
+      runButton.disabled = false;
+      const results = event.data.results;
+      results.forEach(result => {
+        const row = document.createElement("tr");
+        const name = document.createElement("td");
+        const outcome = document.createElement("td");
+        const detail = document.createElement("td");
+        name.textContent = result.name;
+        outcome.textContent = result.passed ? "PASS" : "FAIL";
+        outcome.className = result.passed ? "pass-text" : "fail-text";
+        detail.textContent = result.detail;
+        row.append(name, outcome, detail);
+        resultRows.append(row);
+      });
+      const passed = results.filter(result => result.passed).length;
+      const failed = results.length - passed;
+      status.className = `status ${failed ? "fail" : "pass"}`;
+      status.textContent = failed ? `${passed} passed, ${failed} failed.` : `All ${passed} tests passed.`;
+    });
+  </script>
+</body>
+</html>

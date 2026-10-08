@@ -758,6 +758,224 @@ document.querySelectorAll(".load-btn").forEach(btn => {
   };
 });
 
+function runCacheHarnessTests(){
+  if(running) throw new Error("Stop the simulator before running the test harness.");
+
+  const snapshot = {
+    memory: memory.slice(),
+    cache: cache.map(line => ({...line, word_slots: line.word_slots.slice()})),
+    cacheHits,
+    cacheMisses,
+    inputs: Array.from(document.querySelectorAll("input"), input => input.value),
+    bits: Array.from(bits, bit => bit.classList.contains("on")),
+    terminal: terminalOutput.value,
+    inputQueue: inputQueue.slice(),
+    currentInstructionAddress,
+    halted
+  };
+  const results = [];
+
+  function expect(condition, message){
+    if(!condition) throw new Error(message);
+  }
+  function expectEqual(actual, expected, message){
+    expect(actual === expected, `${message} (expected ${expected}, got ${actual})`);
+  }
+  function prepareFixture(){
+    memory.fill(0);
+    clearCache();
+    setPC(0);
+    setMAR(0);
+    setMBR(0);
+    setIR(0);
+    setMFRBits(0);
+    setCCBits(0);
+    gprBoxes.forEach(box => { box.value = "000000"; });
+    ixrBoxes.forEach(box => { box.value = "000000"; });
+    bits.forEach(bit => bit.classList.remove("on"));
+    inputQueue = [];
+    currentInstructionAddress = null;
+    terminalOutput.value = "";
+    setHaltLight(false);
+    updateWord();
+  }
+  function runCase(name, test){
+    try{
+      prepareFixture();
+      test();
+      results.push({name, passed: true, detail: "Passed"});
+    }catch(error){
+      results.push({name, passed: false, detail: error.message});
+    }
+  }
+
+  try{
+    runCase("Reset starts with eight invalid clean lines", () => {
+      expectEqual(cache.length, 8, "cache line count");
+      expect(cache.every(line => !line.valid && !line.dirty && line.tag === null), "all cache lines should start invalid and clean");
+      expectEqual(cacheHits + cacheMisses, 0, "initial access count");
+    });
+
+    runCase("Address maps to block, line, tag, and word", () => {
+      const location = calculateCacheAddress(40);
+      expectEqual(location.block, 10, "block number");
+      expectEqual(location.line_index, 2, "line index");
+      expectEqual(location.tag, 1, "tag");
+      expectEqual(location.block_start, 40, "block start");
+      expectEqual(location.word_offset, 0, "word offset");
+      const lastWord = calculateCacheAddress(2047);
+      expectEqual(lastWord.line_index, 7, "last memory line");
+      expectEqual(lastWord.tag, 63, "last memory tag");
+      expectEqual(lastWord.word_offset, 3, "last word offset");
+    });
+
+    runCase("Read miss fills all four words", () => {
+      [0x1111, 0x2222, 0x3333, 0x4444].forEach((word, offset) => { memory[8 + offset] = word; });
+      expectEqual(cacheReader(8), 0x1111, "requested word");
+      expectEqual(cache[2].word_slots.join(","), "4369,8738,13107,17476", "filled block contents");
+      expect(cache[2].valid && !cache[2].dirty, "filled line state");
+      expectEqual(cacheMisses, 1, "miss count");
+    });
+
+    runCase("Read hit returns another word and increments hits", () => {
+      memory[8] = 0x1234;
+      memory[9] = 0x5678;
+      cacheReader(8);
+      expectEqual(cacheReader(9), 0x5678, "word from cached block");
+      expectEqual(cacheHits, 1, "hit count");
+      expectEqual(cacheMisses, 1, "miss count");
+    });
+
+    runCase("Write miss allocates and defers main-memory update", () => {
+      memory[9] = 0x2222;
+      expectEqual(cacheWriter(9, 0xAAAA), 0xAAAA, "written value");
+      expectEqual(memory[9], 0x2222, "backing memory before eviction");
+      expect(cache[2].valid && cache[2].dirty, "allocated line should be dirty");
+      expectEqual(cache[2].word_slots[1], 0xAAAA, "cached word");
+    });
+
+    runCase("Dirty conflict writes back full block", () => {
+      [0x1111, 0x2222, 0x3333, 0x4444].forEach((word, offset) => { memory[8 + offset] = word; });
+      [0xAAAA, 0xBBBB, 0xCCCC, 0xDDDD].forEach((word, offset) => { memory[40 + offset] = word; });
+      cacheWriter(9, 0x9999);
+      expectEqual(cacheReader(40), 0xAAAA, "conflicting block data");
+      expectEqual(memory[8], 0x1111, "writeback word 0");
+      expectEqual(memory[9], 0x9999, "writeback modified word");
+      expectEqual(memory[10], 0x3333, "writeback word 2");
+      expectEqual(memory[11], 0x4444, "writeback word 3");
+      expect(cache[2].valid && !cache[2].dirty, "replacement line should be clean");
+      expectEqual(cache[2].tag, 1, "replacement tag");
+    });
+
+    runCase("Non-conflicting blocks remain resident", () => {
+      cacheReader(8);
+      cacheReader(12);
+      expect(cache[2].valid && cache[3].valid, "blocks should use lines 2 and 3");
+      expectEqual(cache[2].tag, 0, "first line tag");
+      expectEqual(cache[3].tag, 0, "second line tag");
+    });
+
+    runCase("Invalid addresses are rejected", () => {
+      [-1, 2048, 1.5, NaN].forEach(address => {
+        let rejected = false;
+        try{ calculateCacheAddress(address); }catch(error){ rejected = error instanceof RangeError; }
+        expect(rejected, `address ${address} should be rejected`);
+      });
+    });
+
+    runCase("Front-panel Store and Load use the cache", () => {
+      setMAR(8);
+      setMBR(0xBEEF);
+      store();
+      expect(cache[2].dirty, "front-panel Store should dirty line 2");
+      expectEqual(memory[8], 0, "front-panel Store should defer backing-memory write");
+      setMBR(0);
+      load();
+      expectEqual(getMBR(), 0xBEEF, "front-panel Load value");
+    });
+
+    runCase("Single-step LDR fetches instruction and data through cache", () => {
+      memory[100] = 0x0400 | 20;
+      memory[20] = 0xCAFE;
+      setPC(100);
+      singleStep();
+      expectEqual(parseInt(gprBoxes[0].value, 8), 0xCAFE, "loaded GPR value");
+      expectEqual(getPC(), 101, "program counter after one instruction");
+      expect(cache.some(line => line.valid), "instruction and data should populate cache");
+    });
+
+    runCase("Cache table renders line state and counters", () => {
+      memory[8] = 0x1234;
+      cacheReader(8);
+      updateCacheDisplay();
+      expectEqual(document.querySelectorAll("#cacheRows tr").length, 8, "rendered cache row count");
+      const row = document.querySelectorAll("#cacheRows tr")[2];
+      expectEqual(row.children[1].textContent, "1", "valid column");
+      expectEqual(row.children[3].textContent, "011064", "octal word display");
+      expectEqual(document.getElementById("cacheStats").textContent, "0 hits · 1 misses", "counter display");
+    });
+
+    runCase("Clear invalidates lines and resets counters", () => {
+      cacheWriter(8, 0xAAAA);
+      cacheReader(9);
+      clearCache();
+      expect(cache.every(line => !line.valid && !line.dirty && line.tag === null), "all lines should be invalid after clear");
+      expectEqual(cacheHits, 0, "hits after clear");
+      expectEqual(cacheMisses, 0, "misses after clear");
+    });
+
+    runCase("Machine reset clears memory and invalidates cache", () => {
+      memory[8] = 0x1234;
+      cacheReader(8);
+      cacheWriter(9, 0xAAAA);
+      resetMachine();
+      expectEqual(memory[8], 0, "memory after machine reset");
+      expect(cache.every(line => !line.valid && !line.dirty && line.tag === null), "cache lines after machine reset");
+      expectEqual(cacheHits + cacheMisses, 0, "access counters after machine reset");
+    });
+
+    runCase("Object-file load invalidates cached memory", () => {
+      cacheReader(8);
+      loadMemoryFromText("10 1234\n");
+      expectEqual(memory[8], 0o1234, "loaded octal value at octal address 10");
+      expect(cache.every(line => !line.valid), "object load should invalidate all lines");
+      expectEqual(cacheHits + cacheMisses, 0, "object load should reset counters");
+    });
+  }finally{
+    memory.forEach((_, address) => { memory[address] = snapshot.memory[address]; });
+    cache.forEach((line, index) => {
+      line.valid = snapshot.cache[index].valid;
+      line.tag = snapshot.cache[index].tag;
+      line.word_slots = snapshot.cache[index].word_slots.slice();
+      line.dirty = snapshot.cache[index].dirty;
+    });
+    cacheHits = snapshot.cacheHits;
+    cacheMisses = snapshot.cacheMisses;
+    Array.from(document.querySelectorAll("input")).forEach((input, index) => { input.value = snapshot.inputs[index] ?? ""; });
+    bits.forEach((bit, index) => { bit.classList.toggle("on", snapshot.bits[index]); });
+    terminalOutput.value = snapshot.terminal;
+    inputQueue = snapshot.inputQueue;
+    currentInstructionAddress = snapshot.currentInstructionAddress;
+    setHaltLight(snapshot.halted);
+    updateWord();
+    updateCacheDisplay();
+  }
+
+  return results;
+}
+
+window.addEventListener("message", event => {
+  const request = event.data;
+  if(window.parent === window || event.source !== window.parent || !request || request.type !== "C6461_CACHE_TEST_RUN") return;
+  let results;
+  try{
+    results = runCacheHarnessTests();
+  }catch(error){
+    results = [{name: "Harness setup", passed: false, detail: error.message}];
+  }
+  window.parent.postMessage({type: "C6461_CACHE_TEST_RESULTS", id: request.id, results}, "*");
+});
+
 setPC(getPC()); setMAR(getMARValue()); setMBR(getMBR()); setIR(getIR()); setMFRBits(getMFRBits()); setCCBits(getCCBits()); updateWord(); updateCacheDisplay();
 </script>
 

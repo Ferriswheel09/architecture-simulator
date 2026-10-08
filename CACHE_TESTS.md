@@ -12,6 +12,8 @@ The cache table appears below the word switches (for easy convenience and viewin
 
 The tests can be performed with the front-panel controls or the browser developer console. Cache helper test values are ordinary hexadecimal JavaScript numbers; the table itself displays octal.
 
+The standalone automated test page is `test/CACHE_TEST_HARNESS.html`. Open it in a browser and select **Run All Tests**. It runs 14 checks and reports individual results in the page. It includes mapping and bounds, block fill and hit behavior, write allocation, full-block dirty write-back, non-conflicting lines, the cache table, front-panel Load/Store, a single-step CPU LDR, cache clearing, full machine reset, and object-file loading. The harness saves and restores the simulator memory, registers, cache, and console state. Stop Run before starting the harness.
+
 For a repeatable helper-level smoke test, open `Machine_Simulator.html`, open the browser developer console, and run this after the page loads:
 
 ```js

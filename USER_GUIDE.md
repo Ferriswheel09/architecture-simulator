@@ -19,6 +19,10 @@ Select **Init**, choose a plain-text `.asm` or `.txt` object file, and wait for 
 
 Front-panel values and object-file words are octal. The cache helper functions and backing-memory test values in `CACHE_TESTS.md` use ordinary JavaScript hexadecimal notation.
 
+## Run the HTML test harness
+
+Open `test/CACHE_TEST_HARNESS.html` in a browser and select **Run All Tests**. The page embeds the simulator under test and reports each case as PASS or FAIL. Its 14 checks cover cache mapping, fills, hits, write allocation, dirty write-back, bounds, table display, front-panel access, CPU instruction access, reset, and object-file loading. The runner temporarily changes machine state and restores it afterward. Stop continuous execution before starting the harness.
+
 ## Cache behavior
 
 The cache is direct-mapped, with eight lines of four words each. For memory address `a`, the word offset is `a % 4`, line index is `floor(a / 4) % 8`, and tag is `floor(floor(a / 4) / 8)`. Reads fill a full block on a miss. Writes allocate on a miss and mark the line dirty; main memory is updated when a dirty line is evicted. Init and successful object-file loads invalidate cache lines and reset the counters.
