@@ -7,10 +7,4 @@ The cache should be a direct mapped cache, with 8 lines of 4 words each.  You ar
 After the competions of the cache modification complete a test and provide a set of test code with your delievery.  If one single steps through your code, the changes in cache should be evident.
 Be sure to develop good test cases.
 
-Deliverable Content
-Your simulator, packaged as a zip file.
-Simple documentation describing how to use your simulator, what the console layout is and how to operate it.
-Test Cases
-Your team’s design notes indicating where in the code changes were made.
-GitHub submit logs to show team participation.  (More experienced persons, teach your team how to submit so that their work is credited.)
-Be sure to use the file naming conventions provided in the first lecture.
+# Part 2 Details

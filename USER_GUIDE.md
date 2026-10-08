@@ -21,7 +21,7 @@ Front-panel values and object-file words are octal. The cache helper functions a
 
 ## Run the HTML test harness
 
-Open `test/CACHE_TEST_HARNESS.html` in a browser and select **Run All Tests**. The page embeds the simulator under test and reports each case as PASS or FAIL. Its 14 checks cover cache mapping, fills, hits, write allocation, dirty write-back, bounds, table display, front-panel access, CPU instruction access, reset, and object-file loading. The runner temporarily changes machine state and restores it afterward. Stop continuous execution before starting the harness.
+Open `test/CACHE_TEST_HARNESS.html` in a browser (separate file) and select **Run All Tests**. The page embeds the simulator under test and reports each case as PASS or FAIL. Its 14 checks cover cache mapping, fills, hits, write allocation, dirty write-back, bounds, table display, front-panel access, CPU instruction access, reset, and object-file loading. The runner temporarily changes machine state and restores it afterward. Stop continuous execution before starting the harness.
 
 ## Cache behavior
 
