@@ -1027,6 +1027,11 @@ function runCacheHarnessTests(){
 
 window.addEventListener("message", event => {
   const request = event.data;
+  if(window.parent !== window && event.source === window.parent && request && request.type === "C6461_PROGRAM1_TEST_RUN"){
+  const results = runProgram1Tests();
+  window.parent.postMessage({type:"C6461_PROGRAM1_TEST_RESULTS", id:request.id, results}, "*");
+  return;
+  }
   if(window.parent === window || event.source !== window.parent || !request || request.type !== "C6461_CACHE_TEST_RUN") return;
   let results;
   try{
@@ -1041,4 +1046,5 @@ setPC(getPC()); setMAR(getMARValue()); setMBR(getMBR()); setIR(getIR()); setMFRB
 </script>
 
 
+<script src="test/Program1.tests.js"></script>
 </body></html>

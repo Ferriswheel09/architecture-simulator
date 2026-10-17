@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Program 1 Test Results</title>
+  <style>
+    body { margin:24px; background:#f2f4f1; color:#202a27; font:16px Georgia,serif; }
+    main { max-width:1500px; margin:auto; }
+    h1 { font-size:28px; }
+    button { padding:10px 18px; background:#17683d; color:white; border:0; cursor:pointer; }
+    table { width:100%; border-collapse:collapse; background:white; font:14px/1.4 sans-serif; }
+    th,td { text-align:left; padding:9px; border-bottom:1px solid #cbd3ce; overflow-wrap:anywhere; }
+    .pass { color:#17683d; } .fail { color:#a12f20; }
+    iframe { width:100%; height:1050px; border:1px solid #cbd3ce; margin-top:24px; }
+  </style>
+</head>
+<body><main>
+  <h1>Program 1 Test Results</h1>
+  <button id="run" disabled>Run Tests</button>
+  <p id="status" role="status">Loading simulator...</p>
+  <table><thead><tr><th>Test</th><th>Result</th><th>Evidence</th></tr></thead><tbody id="results"></tbody></table>
+  <iframe id="simulator" src="../Machine_Simulator.html" title="Simulator under test"></iframe>
+</main><script>
+  const simulator = document.getElementById("simulator");
+  const button = document.getElementById("run");
+  const status = document.getElementById("status");
+  let request = 0;
+  let timer;
+  simulator.onload = () => { button.disabled = false; status.textContent = "Ready"; };
+  button.onclick = () => {
+    button.disabled = true; status.textContent = "Running...";
+    simulator.contentWindow.postMessage({type:"C6461_PROGRAM1_TEST_RUN", id:++request}, "*");
+    timer = setTimeout(() => { button.disabled=false; status.textContent="Test run timed out"; }, 60000);
+  };
+  window.addEventListener("message", event => {
+    if(event.source !== simulator.contentWindow || event.data?.type !== "C6461_PROGRAM1_TEST_RESULTS" || event.data.id !== request) return;
+    clearTimeout(timer); button.disabled = false;
+    const results = event.data.results;
+    document.getElementById("results").replaceChildren(...results.map(result => {
+      const row = document.createElement("tr");
+      [result.name, result.passed ? "PASS" : "FAIL", result.detail].forEach(value => {
+        const cell = document.createElement("td"); cell.textContent=value; row.append(cell);
+      });
+      row.className = result.passed ? "pass" : "fail";
+      return row;
+    }));
+    status.textContent = `${results.filter(result => result.passed).length}/${results.length} tests passed`;
+    status.className = results.every(result => result.passed) ? "pass" : "fail";
+  });
+</script></body></html>
