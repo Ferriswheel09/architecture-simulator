@@ -2,7 +2,8 @@
 <!-- saved from url=(0085)https://mslcourses.org/CSCI6461CommonMaterials/Simulator/CSCI6461Simulator080226.html -->
 <html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
-<title>C6461 Machine Front Panel - Phase 1</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>C6461 Machine Simulator - Program 1</title>
 <style>
     body { margin:0; font-family: Arial, sans-serif; background:#e6e6e6; }
     .workspace { width:1560px; margin:20px auto; display:flex; gap:18px; align-items:flex-start; }
@@ -129,6 +130,21 @@
     #terminalInput { width:100%; box-sizing:border-box; background:#111; color:#fff; border:1px solid #777; padding:8px; font-family:Consolas, monospace; font-size:15px; }
     .terminal-row { display:flex; gap:8px; margin-top:8px; }
     .terminal-row .btn { flex:1; }
+  .workspace { width:min(1560px, calc(100% - 24px)); }
+  .panel { flex:1; min-width:0; }
+  .terminal { flex:0 0 350px; }
+  .top { gap:20px; flex-wrap:wrap; }
+  .switch-blocks { flex-wrap:wrap; }
+  @media(max-width:1100px){
+    .workspace { flex-direction:column; }
+    .panel, .terminal { width:100%; flex:auto; }
+    .panel { padding:20px 12px; }
+    .reg-row { gap:6px; }
+    .reg-label { width:66px; font-size:16px; }
+    .octal-box { width:130px; }
+    .mid-controls { gap:10px; flex-wrap:wrap; }
+    .bit { width:26px; }
+  }
   </style>
 </head>
 <body>
@@ -249,11 +265,16 @@
     <button class="btn" id="terminalSendBtn">Send Line</button>
     <button class="btn" id="terminalClearBtn">Clear</button>
   </div>
+    <div class="terminal-row">
+      <button class="btn" id="program1Btn">Load Program 1</button>
+      <button class="btn" id="object1Btn">Export Object</button>
+    </div>
   <div style="margin-top:10px; font-size:12px; color:#bbb; line-height:1.35;">
     Device 0 = keyboard input. Device 1 = printer output. CHK returns 1 when ready/input is waiting.
   </div>
 </div>
 </div>
+<script src="programs/Program1.js"></script>
 <script>
 const bits = document.querySelectorAll(".bit");
 const display = document.getElementById("wordDisplay");
@@ -554,6 +575,24 @@ function sendTerminalLine(){
 terminalSendBtn.onclick = sendTerminalLine;
 terminalInput.addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); sendTerminalLine(); }});
 terminalClearBtn.onclick = () => { terminalOutput.value = ""; };
+
+function loadProgram1(){
+resetMachine();
+terminalOutput.value = "";
+const program = Program1.build();
+loadMemoryFromText(program.objectText);
+setPC(program.entry);
+terminalInput.focus();
+}
+document.getElementById("program1Btn").onclick = loadProgram1;
+document.getElementById("object1Btn").onclick = () => {
+const url = URL.createObjectURL(new Blob([Program1.build().objectText], {type:"text/plain"}));
+const link = document.createElement("a");
+link.href = url;
+link.download = "Program1.obj.txt";
+link.click();
+setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
 
 /* Instruction execution */
 function executeInstruction(instr){
