@@ -374,6 +374,7 @@ let halted = false;
 let running = false;
 let runTimer = null;
 let inputQueue = [];
+let waitingForInput = false;
 let currentInstructionAddress = null;
 
 const gprBoxes = Array.from(document.querySelectorAll(".column:first-child .reg-row"))
@@ -547,6 +548,7 @@ function sendTerminalLine(){
   const line = terminalInput.value;
   appendTerminal("> " + line + "\n");
   for(const ch of (line + "\n")) inputQueue.push(ch.charCodeAt(0) & 0xFF);
+  waitingForInput = false;
   terminalInput.value = "";
 }
 terminalSendBtn.onclick = sendTerminalLine;
@@ -623,7 +625,13 @@ function executeInstruction(instr){
 
     case "61": { // IN
       if(f.devid !== 0 && f.devid !== 2){ machineFault(4); return; }
-      const ch = inputQueue.length ? inputQueue.shift() : 0;
+      if(inputQueue.length === 0){
+        setPC(currentInstructionAddress);
+        waitingForInput = true;
+        return;
+      }
+      waitingForInput = false;
+      const ch = inputQueue.shift();
       setGPR(f.r, ch & 0xFF);
       return;
     }
@@ -676,7 +684,17 @@ function runMachine(){
   if(running){ stopRun(); return; }
   running = true;
   runBtn.textContent = "Stop";
-  runTimer = setInterval(() => { if(halted){ stopRun(); return; } singleStep(); }, 120);
+  runTimer = setInterval(() => {
+    if(halted){ stopRun(); return; }
+    if(waitingForInput && inputQueue.length === 0) return;
+    for(let count = 0; count < 200 && !halted; count++){
+      const instr = fetchInstruction();
+      if(instr === null) break;
+      executeInstruction(instr);
+      if(waitingForInput) break;
+    }
+    updateCacheDisplay();
+  }, 16);
 }
 
 /* INIT LOAD */
@@ -708,6 +726,7 @@ function resetMachine(){
     else inp.value = "000000";
   });
   inputQueue = [];
+  waitingForInput = false;
   currentInstructionAddress = null;
   setHaltLight(false);
   updateWord();
@@ -770,6 +789,7 @@ function runCacheHarnessTests(){
     bits: Array.from(bits, bit => bit.classList.contains("on")),
     terminal: terminalOutput.value,
     inputQueue: inputQueue.slice(),
+    waitingForInput,
     currentInstructionAddress,
     halted
   };
@@ -794,6 +814,7 @@ function runCacheHarnessTests(){
     ixrBoxes.forEach(box => { box.value = "000000"; });
     bits.forEach(bit => bit.classList.remove("on"));
     inputQueue = [];
+    waitingForInput = false;
     currentInstructionAddress = null;
     terminalOutput.value = "";
     setHaltLight(false);
@@ -955,6 +976,7 @@ function runCacheHarnessTests(){
     bits.forEach((bit, index) => { bit.classList.toggle("on", snapshot.bits[index]); });
     terminalOutput.value = snapshot.terminal;
     inputQueue = snapshot.inputQueue;
+    waitingForInput = snapshot.waitingForInput;
     currentInstructionAddress = snapshot.currentInstructionAddress;
     setHaltLight(snapshot.halted);
     updateWord();
